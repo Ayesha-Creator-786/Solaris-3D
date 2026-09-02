@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - Alerts System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8 text-center text-md-start">
+        <h2 class="fw-bold"><i class="fa-solid fa-bell text-warning me-2"></i>Status & Diagnostics Centre</h2>
+        <p class="text-muted">Review diagnostic flags, performance drops, weather risk warnings and panel health
+            maintenance alerts.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-9 mx-auto">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-solid fa-bell-concierge text-muted me-2"></i>Active Alerts Center</h4>
+
+            <div class="d-flex flex-column gap-3">
+                {% if alerts %}
+                {% for alert in alerts %}
+                <div class="p-4 border-secondary rounded-4 bg-opacity-25 bg-secondary d-flex gap-4 align-items-start border position-relative alert-card-{{ alert.severity }}"
+                    {% if alert.is_read %}style="opacity:0.65;" {% endif %}>
+
+                    <div
+                        class="fs-3 {% if alert.severity == 'danger' %}text-danger{% elif alert.severity == 'warning' %}text-warning{% else %}text-info{% endif %}">
+                        <i
+                            class="fa-solid {% if alert.alert_type == 'maintenance' %}fa-wrench-simple{% elif alert.alert_type == 'weather_risk' %}fa-cloud-bolt{% else %}fa-exclamation-triangle{% endif %}"></i>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+                            <h5 class="fw-bold text-white mb-0">{{ alert.title }}</h5>
+                            <span
+                                class="badge {% if alert.severity == 'danger' %}bg-danger{% elif alert.severity == 'warning' %}bg-warning text-dark{% else %}bg-info{% endif %} px-2.5 text-uppercase"
+                                style="font-size: 0.7rem;">
+                                {{ alert.severity }}
+                            </span>
+                            {% if alert.is_read %}
+                            <span class="badge bg-secondary px-2" style="font-size: 0.7rem;"><i
+                                    class="fa-solid fa-check"></i> Read</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted fs-6 mb-2" style="line-height: 1.4;">{{ alert.message }}</p>
+                        <small class="text-muted"><i class="fa-regular fa-clock me-1"></i> Raised: {{
+                            alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        {% if not alert.is_read %}
+                        <form action="{{ url_for('alerts.mark_read', alert_id=alert.id) }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary px-3 py-1.5 text-white"
+                                title="Mark as Read">
+                                <i class="fa-solid fa-square-check"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <form action="{{ url_for('alerts.delete_alert', alert_id=alert.id) }}" method="POST">
+                            <button type="submit" class="btn btn-sm btn-outline-danger px-3 py-1.5"
+                                title="Dismiss Alert">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fa-solid fa-circle-check text-success fs-1 mb-3"></i>
+                    <p class="text-muted">Your solar installations are functioning perfectly.<br>No warnings logged.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - Solar Generation Log{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Log Form -->
+    <div class="col-lg-4">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-solid fa-square-plus text-warning me-2"></i>New Generation Log</h4>
+            <form action="{{ url_for('solar.index') }}" method="POST">
+                <div class="mb-3">
+                    <label for="date" class="form-label">Record Date</label>
+                    <input type="date" class="form-control" id="date" name="date" required value="{{ today_str }}">
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="hour" class="form-label">Hour of Day</label>
+                        <select class="form-select" id="hour" name="hour" required>
+                            {% for h in range(6, 19) %}
+                            <option value="{{ h }}" {% if h==12 %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label for="temperature" class="form-label">Temp (°C)</label>
+                        <input type="number" step="0.1" class="form-control" id="temperature" name="temperature"
+                            required placeholder="32.5">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="humidity" class="form-label">Humidity (%)</label>
+                        <input type="number" step="1" class="form-control" id="humidity" name="humidity" min="0"
+                            max="100" required placeholder="65">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label for="cloud_cover" class="form-label">Clouds (%)</label>
+                        <input type="number" step="1" class="form-control" id="cloud_cover" name="cloud_cover" min="0"
+                            max="100" required placeholder="10">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="irradiance" class="form-label">Solar Irradiance (W/m²)</label>
+                    <input type="number" step="1" class="form-control" id="irradiance" name="irradiance" min="0"
+                        max="1500" required placeholder="850">
+                    <div class="form-text text-muted" style="font-size: 0.80rem;">Value ranges from 0 (completely dark)
+                        to ~1000 W/m² (bright solar radiation).</div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="solar_output" class="form-label"><b>Actual Solar Output (kW)</b></label>
+                    <input type="number" step="0.01" class="form-control" id="solar_output" name="solar_output" required
+                        placeholder="4.8">
+                    <div class="form-text text-warning" style="font-size: 0.80rem;"><i class="fa-solid fa-robot"></i>
+                        SolarIQ model will automatically calculate predicted output and system efficiency.</div>
+                </div>
+
+                <button type="submit" class="btn btn-premium-primary w-100 py-3">
+                    <i class="fa-solid fa-circle-check me-2"></i> Submit & Predict
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Solar Logs History Table -->
+    <div class="col-lg-8">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-solid fa-list text-warning me-2"></i>Log History Archive</h4>
+
+            <div class="table-responsive">
+                <table class="table table-dark-glass align-middle">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Hour</th>
+                            <th>Weather Info</th>
+                            <th>Irradiance</th>
+                            <th>Actual Output</th>
+                            <th>Predicted</th>
+                            <th>Efficiency</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if records %}
+                        {% for r in records %}
+                        <tr>
+                            <td>{{ r.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ r.hour }}:00</td>
+                            <td>
+                                <small class="text-muted d-block">{{ r.temperature }}°C, {{ r.humidity | int }}%
+                                    Hum</small>
+                                <small class="text-muted">Cloud: {{ r.cloud_cover | int }}%</small>
+                            </td>
+                            <td>{{ r.irradiance }} <span class="text-muted" style="font-size: 0.8rem;">W/m²</span></td>
+                            <td class="fw-bold text-white">{{ r.solar_output }} kW</td>
+                            <td class="text-info">{{ r.predicted_output }} kW</td>
+                            <td>
+                                {% set score = r.efficiency %}
+                                <span
+                                    class="badge {% if score >= 95 %}badge-excellent{% elif score >= 85 %}badge-good{% elif score >= 70 %}badge-moderate{% else %}badge-poor{% endif %}">
+                                    {{ score }}%
+                                </span>
+                            </td>
+                            <td>
+                                <form action="{{ url_for('solar.delete_record', record_id=r.id) }}" method="POST"
+                                    onsubmit="return confirm('Delete this solar data entry permanently?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0">
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-folder-open fs-1 mb-3"></i>
+                                <p class="mb-0">No solar yield records logged yet.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

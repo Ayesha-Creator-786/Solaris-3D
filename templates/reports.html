@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - Diagnostic Reports{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Report Generator Panel -->
+    <div class="col-lg-4">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-solid fa-file-invoice text-warning me-2"></i>Report Generator</h4>
+            <p class="text-muted mb-4 style=" font-size: 0.95rem;">Compile solar logs, weather impact summaries,
+                efficiency scores, and smart recommendations into an exportable file.</p>
+
+            <form action="{{ url_for('reports.index') }}" method="POST">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Report Title</label>
+                    <input type="text" class="form-control text-white" id="title" name="title" required
+                        placeholder="E.g., June Yield Overview">
+                </div>
+
+                <div class="mb-4">
+                    <label for="report_type" class="form-label">Report Scope / Type</label>
+                    <select class="form-select text-white bg-dark-glass" id="report_type" name="report_type" required>
+                        <option value="daily">Daily Report (Today)</option>
+                        <option value="weekly" selected>Weekly Performance Report (Last 7 Days)</option>
+                        <option value="monthly">Monthly Diagnostics Report (Last 30 Days)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-premium-primary w-100 py-3">
+                    <i class="fa-solid fa-gears me-2"></i> Compile & Generate Report
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reports Log Archives -->
+    <div class="col-lg-8">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-regular fa-folder-open text-warning me-2"></i>System Report Archives
+            </h4>
+
+            <div class="table-responsive">
+                <table class="table table-dark-glass align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Generated Time</th>
+                            <th>Report Name</th>
+                            <th>Range Type</th>
+                            <th>Data Range Analyzed</th>
+                            <th class="text-end">Export Output</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if reports %}
+                        {% for r in reports %}
+                        <tr>
+                            <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <strong class="text-white d-block">{{ r.title }}</strong>
+                                <small class="text-muted"
+                                    style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; max-width: 320px;">
+                                    {{ r.content }}
+                                </small>
+                            </td>
+                            <td><span class="badge bg-secondary text-capitalize px-2.5 py-1.5">{{ r.report_type
+                                    }}</span></td>
+                            <td>
+                                <small class="text-muted">{{ r.start_date.strftime('%b %d, %Y') }} to {{
+                                    r.end_date.strftime('%b %d, %Y') }}</small>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('reports.export_pdf', report_id=r.id) }}"
+                                    class="btn btn-sm btn-premium-primary px-3 py-1.5">
+                                    <i class="fa-solid fa-file-pdf me-1"></i> Export PDF
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-inbox fs-1 mb-3"></i>
+                                <p class="mb-0">No consolidated energy reports generated yet.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

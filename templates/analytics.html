@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - Advanced Analytics{% endblock %}
+
+{% block content %}
+<div class="row mb-5">
+    <div class="col-12 text-center text-lg-start">
+        <h2 class="fw-bold"><i class="fa-solid fa-chart-pie text-warning me-2"></i>Solar Performance Analytics</h2>
+        <p class="text-muted">Compare historical generation records, track efficiency variables, and analyze
+            weather-to-irradiance output correlations.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Daily yields comparison -->
+    <div class="col-lg-6">
+        <div class="glass-card">
+            <h5 class="fw-bold mb-4">Daily Yield Comparison (Actual vs. Expected)</h5>
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="dailyYieldsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Efficiency Timeline -->
+    <div class="col-lg-6">
+        <div class="glass-card">
+            <h5 class="fw-bold mb-4">Solar Panels Efficiency Score (%)</h5>
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="efficiencyTimelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Weather impact correlation -->
+    <div class="col-lg-6">
+        <div class="glass-card">
+            <h5 class="fw-bold mb-2">Weather Impact Analysis</h5>
+            <p class="text-muted mb-4" style="font-size: 0.85rem;">Correlation map displaying Irradiance (W/m²) relative
+                to Real Generation (kW). Click dots to examine values.</p>
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="weatherImpactChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly yields comparison -->
+    <div class="col-lg-6">
+        <div class="glass-card">
+            <h5 class="fw-bold mb-4">Monthly Generation Yields (Cumulative)</h5>
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="monthlyYieldsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Fetch graph payloads from internal API
+        fetch("{{ url_for('analytics.api_data') }}")
+            .then(res => res.json())
+            .then(data => {
+                renderDailyChart(data.daily);
+                renderEfficiencyChart(data.daily);
+                renderWeatherImpactChart(data.weather_impact);
+                renderMonthlyChart(data.monthly);
+            })
+            .catch(err => console.error("Error loaded API analytics payload: ", err));
+
+        function renderDailyChart(daily) {
+            const ctx = document.getElementById('dailyYieldsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: daily.labels,
+                    datasets: [
+                        {
+                            label: 'Actual Yield (kW)',
+                            data: daily.actual,
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            borderWidth: 3,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Predicted Yield (kW)',
+                            data: daily.predicted,
+                            borderColor: '#3b82f6',
+                            borderDash: [5, 5],
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#f3f4f6' } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } }
+                    }
+                }
+            });
+        }
+
+        function renderEfficiencyChart(daily) {
+            const ctx = document.getElementById('efficiencyTimelineChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: daily.labels,
+                    datasets: [{
+                        label: 'Avg Daily Efficiency %',
+                        data: daily.efficiency,
+                        backgroundColor: daily.efficiency.map(v => {
+                            if (v >= 95) return 'rgba(16, 185, 129, 0.6)';  // Green
+                            if (v >= 85) return 'rgba(59, 130, 246, 0.6)';  // Blue
+                            if (v >= 70) return 'rgba(251, 191, 36, 0.6)';  // Yellow
+                            return 'rgba(239, 68, 68, 0.6)';              // Red
+                        }),
+                        borderColor: '#111827',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#9ca3af' },
+                            min: 0,
+                            max: 120
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderWeatherImpactChart(impactPoints) {
+            const ctx = document.getElementById('weatherImpactChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Data Samples',
+                        data: impactPoints,
+                        backgroundColor: '#fbbf24',
+                        hoverBackgroundColor: '#fbbf24',
+                        radius: 6,
+                        hoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const p = context.raw;
+                                    return `Irr: ${p.x} W/m², Output: ${p.y} kW, Clouds: ${p.cloud}%`;
+                                }
+                            }
+                        },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            title: { display: true, text: 'Solar Irradiance (W/m²)', color: '#f3f4f6' },
+                            ticks: { color: '#9ca3af' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            title: { display: true, text: 'Generation Output (kW)', color: '#f3f4f6' },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMonthlyChart(monthly) {
+            const ctx = document.getElementById('monthlyYieldsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthly.labels,
+                    datasets: [
+                        {
+                            label: 'Actual Yield (kW)',
+                            data: monthly.actual,
+                            backgroundColor: 'rgba(251, 191, 36, 0.7)'
+                        },
+                        {
+                            label: 'Predicted Yield (kW)',
+                            data: monthly.predicted,
+                            backgroundColor: 'rgba(59, 130, 246, 0.4)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#f3f4f6' } }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

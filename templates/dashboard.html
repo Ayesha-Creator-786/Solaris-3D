@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Stat 1: Total Generation -->
+    <div class="col-md-4">
+        <div class="glass-card d-flex align-items-center justify-content-between p-4">
+            <div>
+                <span class="text-muted d-block mb-1">Total Solar Yield</span>
+                <h2 class="fw-bold tracking-tight text-white mb-0">{{ stats.total_output }} <span
+                        class="fs-5 fw-normal text-muted">kW</span></h2>
+            </div>
+            <div class="fs-1 text-warning p-3 bg-secondary rounded-4 bg-opacity-25"
+                style="border: 1px solid rgba(251,191,36,0.15)">
+                <i class="fa-solid fa-solar-panel"></i>
+            </div>
+        </div>
+    </div>
+    <!-- Stat 2: Daily Generation -->
+    <div class="col-md-4">
+        <div class="glass-card d-flex align-items-center justify-content-between p-4">
+            <div>
+                <span class="text-muted d-block mb-1">Today's Generation</span>
+                <h2 class="fw-bold tracking-tight text-white mb-0">{{ stats.daily_generation }} <span
+                        class="fs-5 fw-normal text-muted">kW</span></h2>
+            </div>
+            <div class="fs-1 text-success p-3 bg-secondary rounded-4 bg-opacity-25"
+                style="border: 1px solid rgba(16,185,129,0.15)">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+        </div>
+    </div>
+    <!-- Stat 3: Monthly Generation -->
+    <div class="col-md-4">
+        <div class="glass-card d-flex align-items-center justify-content-between p-4">
+            <div>
+                <span class="text-muted d-block mb-1">Monthly Yield (MTD)</span>
+                <h2 class="fw-bold tracking-tight text-white mb-0">{{ stats.monthly_generation }} <span
+                        class="fs-5 fw-normal text-muted">kW</span></h2>
+            </div>
+            <div class="fs-1 text-info p-3 bg-secondary rounded-4 bg-opacity-25"
+                style="border: 1px solid rgba(59,130,246,0.15)">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Weather Widget -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1">Weather Overview</h5>
+                    <span class="text-muted fs-6"><i class="fa-solid fa-location-dot text-danger me-1"></i> {{
+                        weather.city if weather else 'Sync required' }}</span>
+                </div>
+                <a href="{{ url_for('weather.index') }}" class="btn btn-premium-secondary btn-sm"><i
+                        class="fa-solid fa-arrows-rotate"></i> Sync</a>
+            </div>
+
+            {% if weather %}
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="fs-1 text-warning">
+                    <!-- Icon placeholder from openweather or replacement -->
+                    <i
+                        class="fa-solid {% if 'cloud' in weather.description.lower() %}fa-cloud-sun{% elif 'rain' in weather.description.lower() %}fa-cloud-showers-heavy{% else %}fa-sun{% endif %} text-warning fs-1"></i>
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-0 text-white">{{ weather.temperature }}°C</h1>
+                    <span class="text-muted fw-bold">{{ weather.description }}</span>
+                </div>
+            </div>
+
+            <div class="row text-center border-top border-secondary pt-3 mt-3">
+                <div class="col-4 border-end border-secondary">
+                    <small class="text-muted d-block">Humidity</small>
+                    <span class="fw-bold text-white">{{ weather.humidity }}%</span>
+                </div>
+                <div class="col-4 border-end border-secondary">
+                    <small class="text-muted d-block">Clouds</small>
+                    <span class="fw-bold text-white">{{ weather.cloud_cover }}%</span>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted d-block">Wind</small>
+                    <span class="fw-bold text-white">{{ weather.wind_speed }} m/s</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fa-solid fa-cloud-sun text-muted fs-1 mb-3"></i>
+                <p class="text-muted">No weather data found in system context.<br>Click Sync to update weather
+                    conditions.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Active Diagnosis / Efficiency Widget -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4">
+            <h5 class="fw-bold mb-3">Solar Efficiency Status</h5>
+
+            <div class="text-center py-3">
+                <span class="text-muted d-block mb-1">Cumulative Efficiency Score</span>
+                <h1 class="fw-extrabold display-4 mb-2 {{ status_class }}">{{ efficiency_avg }}%</h1>
+                <span
+                    class="badge {{ 'badge-excellent' if status_label == 'Excellent' else ('badge-good' if status_label == 'Good' else ('badge-moderate' if status_label == 'Moderate' else 'badge-poor')) }} px-3 py-2 fs-6 rounded-pill">
+                    {{ status_label }} Performance
+                </span>
+            </div>
+
+            <div class="mt-4 pt-3 border-top border-secondary">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Expected AI Prediction:</span>
+                    <span class="fw-bold text-white">{{ stats.total_output + 15.0 if stats.total_output > 0 else '0.0'
+                        }} kW</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Actual Generation Output:</span>
+                    <span class="fw-bold text-white">{{ stats.total_output }} kW</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Alerts list -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0">System Diagnostic Alerts</h5>
+                <a href="{{ url_for('alerts.index') }}" class="text-warning text-decoration-none fw-bold fs-6">View
+                    All</a>
+            </div>
+
+            <div class="d-flex flex-column gap-3 overflow-auto" style="max-height: 250px;">
+                {% if alerts %}
+                {% for alert in alerts %}
+                <div class="p-3 border-secondary rounded-4 bg-opacity-25 bg-secondary d-flex gap-3 align-items-start border"
+                    style="border-left: 4px solid {% if alert.severity == 'danger' %}var(--accent-red){% elif alert.severity == 'warning' %}var(--accent-solar){% else %}var(--accent-blue){% endif %} !important">
+                    <div
+                        class="fs-5 {% if alert.severity == 'danger' %}text-danger{% elif alert.severity == 'warning' %}text-warning{% else %}text-info{% endif %}">
+                        <i
+                            class="fa-solid {% if alert.alert_type == 'maintenance' %}fa-wrench{% elif alert.alert_type == 'weather_risk' %}fa-cloud-bolt{% else %}fa-circle-exclamation{% endif %}"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <strong class="d-block text-white fs-6 mb-1">{{ alert.title }}</strong>
+                        <p class="text-muted mb-0" style="font-size: 0.85rem; line-height: 1.2;">{{ alert.message }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fa-solid fa-circle-check text-success fs-1 mb-3"></i>
+                    <p class="text-muted mb-0">Your panel system is running healthy.<br>No warnings logged.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Chart: Daily actual vs predicted -->
+    <div class="col-lg-8">
+        <div class="glass-card p-4">
+            <h5 class="fw-bold mb-4">Solar Output Trend (Actual vs. Expected AI Prediction)</h5>
+            <div class="chart-container" style="height: 320px;">
+                <canvas id="dashboardChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info panel: Quick Actions -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4 d-flex flex-column justify-content-between">
+            <div>
+                <h5 class="fw-bold mb-3">Quick Navigation Console</h5>
+                <p class="text-muted mb-4" style="font-size: 0.95rem;">Review current weather attributes, query machine
+                    learning prediction models, or run a diagnostic panel report.</p>
+            </div>
+
+            <div class="d-flex flex-column gap-3">
+                <a href="{{ url_for('solar.index') }}" class="btn btn-premium-primary w-100 py-3 text-center d-block">
+                    <i class="fa-solid fa-solar-panel me-2"></i> Log Solar Yield Data
+                </a>
+                <a href="{{ url_for('prediction.index') }}"
+                    class="btn btn-premium-secondary w-100 py-3 text-center d-block">
+                    <i class="fa-solid fa-calculator me-2"></i> ML Prediction Sandbox
+                </a>
+                <a href="{{ url_for('reports.index') }}"
+                    class="btn btn-premium-secondary w-100 py-3 text-center d-block">
+                    <i class="fa-solid fa-file-pdf me-2"></i> Generate & Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- ChartJS Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const ctx = document.getElementById('dashboardChart').getContext('2d');
+
+        // Feed sample labels, actual, predicted arrays from blueprint context
+        const labels = [
+            {% for r in recent_solar %}
+                '{{ r.date.strftime("%b %d") }} {{ r.hour }}:00',
+        {% endfor %}
+        ];
+
+    const actualData = [
+        {% for r in recent_solar %}
+    { { r.solar_output or 0.0 } },
+    {% endfor %}
+    ];
+
+    const predictedData = [
+        {% for r in recent_solar %}
+    { { r.predicted_output or 0.0 } },
+    {% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Actual Solar Generation (kW)',
+                    data: actualData,
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fbbf24',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Expected AI Model Prediction (kW)',
+                    data: predictedData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3b82f6',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#f3f4f6',
+                        font: {
+                            family: 'Outfit',
+                            size: 12
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: {
+                            family: 'Outfit'
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: {
+                            family: 'Outfit'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Solar Capacity (kW)',
+                        color: '#f3f4f6'
+                    }
+                }
+            }
+        }
+    });
+    });
+</script>
+{% endblock %}

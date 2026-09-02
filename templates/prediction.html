@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}SolarIQ - AI prediction Sandbox{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Sandbox Input Form -->
+    <div class="col-lg-5">
+        <div class="glass-card">
+            <h4 class="fw-bold mb-4"><i class="fa-solid fa-brain text-warning me-2"></i>AI Yield Predictor</h4>
+            <p class="text-muted mb-4" style="font-size: 0.95rem;">Model inputs to forecast solar generation. The system
+                passes these attributes to the trained Random Forest model to compute expected capacity.</p>
+
+            <form action="{{ url_for('prediction.index') }}" method="POST">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="temperature" class="form-label">Temperature (°C)</label>
+                        <input type="number" step="0.1" class="form-control" id="temperature" name="temperature"
+                            required value="{{ inputs.temperature }}">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label for="humidity" class="form-label">Humidity (%)</label>
+                        <input type="number" step="1" class="form-control" id="humidity" name="humidity" min="0"
+                            max="100" required value="{{ inputs.humidity }}">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label for="cloud_cover" class="form-label">Cloud Cover (%)</label>
+                        <input type="number" step="1" class="form-control" id="cloud_cover" name="cloud_cover" min="0"
+                            max="100" required value="{{ inputs.cloud_cover }}">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label for="irradiance" class="form-label">Irradiance (W/m²)</label>
+                        <input type="number" step="1" class="form-control" id="irradiance" name="irradiance" min="0"
+                            max="1500" required value="{{ inputs.irradiance }}">
+                    </div>
+                </div>
+
+                <div class="row text-white mb-3">
+                    <div class="col-6 mb-3">
+                        <label for="hour" class="form-label">Hour of Day</label>
+                        <select class="form-select" id="hour" name="hour">
+                            {% for h in range(6, 19) %}
+                            <option value="{{ h }}" {% if h==inputs.hour %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label for="month" class="form-label">Month of Year</label>
+                        <select class="form-select" id="month" name="month">
+                            {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m==inputs.month %}selected{% endif %}>
+                                {% if m == 1 %}January{% elif m == 2 %}February{% elif m == 3 %}March{% elif m == 4
+                                %}April{% elif m == 5 %}May{% elif m == 6 %}June{% elif m == 7 %}July{% elif m == 8
+                                %}August{% elif m == 9 %}September{% elif m == 10 %}October{% elif m == 11 %}November{%
+                                else %}December{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="actual_output" class="form-label">Actual Solar Output (kW) <span
+                            class="text-muted">(Optional)</span></label>
+                    <input type="number" step="0.01" class="form-control" id="actual_output" name="actual_output"
+                        value="{{ inputs.actual_output }}" placeholder="E.g., 4.5">
+                    <div class="form-text text-muted" style="font-size: 0.8rem;">Entering actual capacity calculates
+                        efficiency scores instantly.</div>
+                </div>
+
+                <button type="submit" class="btn btn-premium-primary w-100 py-3">
+                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Run AI Simulation
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prediction Results Dashboard -->
+    <div class="col-lg-7">
+        <div class="d-flex flex-column gap-4">
+
+            {% if prediction_result %}
+            <!-- Glowing prediction metric -->
+            <div class="glass-card text-center py-5" style="border: 2px solid var(--accent-solar);">
+                <span class="text-orange fw-bold d-block text-uppercase mb-2 text-warning"
+                    style="letter-spacing: 1px;">AI Model Prediction Result</span>
+                <h1 class="display-3 fw-bold mb-2 text-white">{{ prediction_result.predicted_output }} <span
+                        class="fs-2 text-muted fw-normal">kW</span></h1>
+                <p class="text-muted mb-0">Estimated Solar Output expected under simulated weather attributes.</p>
+
+                {% if prediction_result.actual_output is not none %}
+                <!-- Efficiency overlay -->
+                <div class="row justify-content-center mt-5 pt-4 border-top border-secondary mx-3">
+                    <div class="col-md-5 text-center">
+                        <span class="text-muted d-block mb-1">Actual Output</span>
+                        <h3 class="fw-bold text-white mb-0">{{ prediction_result.actual_output }} kW</h3>
+                    </div>
+                    <div class="col-md-5 text-center mt-3 mt-md-0">
+                        <span class="text-muted d-block mb-1">Efficiency Ratio</span>
+                        <h3 class="fw-bold text-white mb-1">{{ prediction_result.efficiency_score }}%</h3>
+                        <span
+                            class="badge {% if prediction_result.efficiency_score >= 95 %}badge-excellent{% elif prediction_result.efficiency_score >= 85 %}badge-good{% elif prediction_result.efficiency_score >= 70 %}badge-moderate{% else %}badge-poor{% endif %}">
+                            {{ prediction_result.efficiency_label }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Smart suggestions -->
+            <div class="glass-card">
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-lightbulb text-warning me-2"></i>Smart AI Insights &
+                    Recommendations</h5>
+                <ul class="d-flex flex-column gap-3 mb-0 ps-3">
+                    {% for rec in recommendations %}
+                    <li class="text-white" style="font-size: 0.95rem; line-height: 1.4;">{{ rec }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <!-- Welcome placeholder panel -->
+            <div class="glass-card text-center py-5 d-flex flex-column align-items-center justify-content-center h-100">
+                <i class="fa-solid fa-calculator text-muted display-3 mb-4"></i>
+                <h4 class="fw-bold">Ready for Prediction</h4>
+                <p class="text-muted px-4" style="max-width: 500px;">Enter weather metrics, cloud levels, and day
+                    parameters on the left, then click 'Run AI Simulation' to evaluate predicted solar production
+                    outputs.</p>
+            </div>
+            {% endif %}
+
+            <!-- Trial Log -->
+            <div class="glass-card">
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left text-muted me-2"></i>Prediction Sandbox
+                    Queries</h5>
+                <div class="table-responsive">
+                    <table class="table table-dark-glass align-middle mb-0" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Inputs (T / H / C)</th>
+                                <th>Irradiance</th>
+                                <th>Expected Solar</th>
+                                <th>Actual</th>
+                                <th>Efficiency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if past_predictions %}
+                            {% for p in past_predictions %}
+                            <tr>
+                                <td>{{ p.created_at.strftime('%H:%M:%S') }}</td>
+                                <td>{{ p.temperature }}°C / {{ p.humidity | int }}% / {{ p.cloud_cover | int }}%</td>
+                                <td>{{ p.irradiance }} W/m²</td>
+                                <td class="text-orange fw-bold text-warning">{{ p.predicted_output }} kW</td>
+                                <td>{{ p.actual_output if p.actual_output else '-' }}</td>
+                                <td>
+                                    {% if p.efficiency_score %}
+                                    <span
+                                        class="badge {% if p.efficiency_score >= 95 %}badge-excellent{% elif p.efficiency_score >= 85 %}badge-good{% elif p.efficiency_score >= 70 %}badge-moderate{% else %}badge-poor{% endif %}">
+                                        {{ p.efficiency_score }}%
+                                    </span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No prediction sandbox runs executed
+                                    yet.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
